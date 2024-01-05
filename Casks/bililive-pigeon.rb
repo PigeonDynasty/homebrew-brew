@@ -1,8 +1,8 @@
 cask "bililive-pigeon" do
   arch arm: "aarch64", intel: "x64"
-  version "0.0.4"
-  sha256  intel: "df4cbe54cad306d9a3247686f80e7a24b4baea97dea532ca82226f94e5bc1353",
-          arm:   "c5eea3a8bf72bcd05699e6dcc078cdfbb752b22b9cd7c453a864ffaa4a332910"
+  version "0.0.5"
+  sha256  intel: "e2c1c94dc941e57415ec022e9b30bc332f7acd06f07df5827a6cdef0d5295cbb",
+          arm:   "e70a8a0c8c69081a3283e3c34ec801b6bbfb0ea902b789ff54d498b5d987498e"
           
   url "https://github.com/PigeonDynasty/bililive-pigeon-tauri/releases/download/v#{version}/Bililive.Pigeon_#{version}_#{arch}.dmg"
   
