@@ -20,8 +20,11 @@ cask "bililive-pigeon" do
 
   app "Bililive Pigeon.app"
   
-  caveats <<~EOS
-    You may need to enter the following code in the terminal to get it to work
-    'sudo xattr -r -d com.apple.quarantine /Applications/Bililive Pigeon.app'
-  EOS
+  postflight do
+    system "sudo", "xattr", "-r", "-d", "com.apple.quarantine", 
+           "/Applications/Bililive Pigeon.app"
+  end
+         
+  caveats "postflight script already executed quarantine removal."
+
 end
