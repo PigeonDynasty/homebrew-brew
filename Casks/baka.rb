@@ -1,6 +1,6 @@
 cask "baka" do
   version "5.0.0,0624"
-  sha256 "1b7220e79192c39b7e0aa33238f3c55ee5e30dd3bef0ebe17e5bcf6299b77f3d"
+  sha256 "1643a1dc8ca50d365c9ccb95561f8140a4a46a2bd6b700c95049431b9483f04f"
           
   on_macos do
     version_major, build = version.split(",")
