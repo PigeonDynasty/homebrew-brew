@@ -16,7 +16,7 @@ cask "bililive-pigeon" do
   desc "bililive pigeon."
   homepage "https://github.com/PigeonDynasty/bililive-pigeon-tauri"
 
-  depends_on macos: ">= :catalina"
+  depends_on macos: :catalina
 
   app "Bililive Pigeon.app"
   
