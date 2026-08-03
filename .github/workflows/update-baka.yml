@@ -59,11 +59,10 @@ jobs:
           set -euo pipefail
 
           version="${{ steps.release.outputs.tag }}"
-          version_major="${version%%+*}"
           build="${version#*+}"
 
-          arm_url="https://github.com/AniBakaBaka/AniBaka/releases/download/${version_major}/baka-${version}-macos-arm64.dmg"
-          x86_url="https://github.com/AniBakaBaka/AniBaka/releases/download/${version_major}/baka-${version}-macos-x86_64.dmg"
+          arm_url="https://github.com/AniBakaBaka/AniBaka/releases/download/${version}/baka-${version}-macos-arm64.dmg"
+          x86_url="https://github.com/AniBakaBaka/AniBaka/releases/download/${version}/baka-${version}-macos-x86_64.dmg"
 
           tmpdir="$(mktemp -d)"
           curl -fsSL -L "$arm_url" -o "$tmpdir/baka-arm64.dmg"
@@ -72,7 +71,7 @@ jobs:
           arm_sha="$(shasum -a 256 "$tmpdir/baka-arm64.dmg" | awk '{print $1}')"
           x86_sha="$(shasum -a 256 "$tmpdir/baka-x86_64.dmg" | awk '{print $1}')"
 
-          echo "version_major=$version_major" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "arm_url=$arm_url" >> "$GITHUB_OUTPUT"
           echo "x86_url=$x86_url" >> "$GITHUB_OUTPUT"
           echo "arm_sha=$arm_sha" >> "$GITHUB_OUTPUT"
