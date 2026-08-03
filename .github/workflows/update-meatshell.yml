@@ -1,0 +1,133 @@
+name: Update meatshell cask
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 3 * * *" # 每天 UTC 03:23
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-cask:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Read current cask version
+        id: current
+        shell: bash
+        run: |
+          set -euo pipefail
+          current_version="$(ruby -e 'text=File.read("Casks/meatshell.rb"); puts text[/^\s*version\s+"([^"]+)"/, 1]')"
+          if [ -z "$current_version" ]; then
+            echo "Failed to read current version from Casks/meatshell.rb"
+            exit 1
+          fi
+          echo "version=$current_version" >> "$GITHUB_OUTPUT"
+
+      - name: Get latest GitHub release
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          json="$(curl -fsSL https://api.github.com/repos/yituorou/meatshell/releases/latest)"
+          tag="$(echo "$json" | jq -r '.tag_name')"
+
+          if [ -z "$tag" ] || [ "$tag" = "null" ]; then
+            echo "Failed to get latest release tag"
+            exit 1
+          fi
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Compare versions
+        id: compare
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          current="${{ steps.current.outputs.version }}"
+          latest="${{ steps.release.outputs.tag }}"
+
+          current="${current#v}"
+          latest="${latest#v}"
+
+          if [ "$current" = "$latest" ]; then
+            echo "update_needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "update_needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Stop if up to date
+        if: steps.compare.outputs.update_needed == 'false'
+        run: echo "Cask is already up to date."
+
+      - name: Download release asset and calculate sha256
+        if: steps.compare.outputs.update_needed == 'true'
+        id: sha
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="${{ steps.release.outputs.tag }}"
+          version="${version#v}"
+          asset_url="https://github.com/yituorou/meatshell/releases/download/v${version}/meatshell-v${version}-macos-aarch64.zip"
+
+          tmpdir="$(mktemp -d)"
+          curl -fsSL -L "$asset_url" -o "$tmpdir/meatshell.zip"
+
+          sha256="$(shasum -a 256 "$tmpdir/meatshell.zip" | awk '{print $1}')"
+
+          echo "asset_url=$asset_url" >> "$GITHUB_OUTPUT"
+          echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Update cask file
+        if: steps.compare.outputs.update_needed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="${{ steps.release.outputs.tag }}"
+          version="${version#v}"
+          sha256="${{ steps.sha.outputs.sha256 }}"
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          import re
+
+          path = Path("Casks/meatshell.rb")
+          text = path.read_text()
+
+          version = os.environ["VERSION"]
+          sha256 = os.environ["SHA256"]
+
+          text = re.sub(r'^\s*version\s+".*"$', f'  version "{version}"', text, flags=re.M)
+          text = re.sub(r'^\s*sha256\s+".*"$', f'  sha256 "{sha256}"', text, flags=re.M)
+
+          path.write_text(text)
+          PY
+        env:
+          VERSION: ${{ steps.release.outputs.tag }}
+          SHA256: ${{ steps.sha.outputs.sha256 }}
+
+      - name: Create pull request
+        if: steps.compare.outputs.update_needed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: chore/update-meatshell-cask
+          commit-message: "chore: update meatshell cask to ${{ steps.release.outputs.tag }}"
+          title: "Update meatshell cask to ${{ steps.release.outputs.tag }}"
+          body: |
+            Automated update from upstream GitHub release.
+
+            - Release: `${{ steps.release.outputs.tag }}`
+            - Asset: `${{ steps.sha.outputs.asset_url }}`
+            - SHA256: `${{ steps.sha.outputs.sha256 }}`
+          labels: automated, homebrew, cask
+          delete-branch: true
