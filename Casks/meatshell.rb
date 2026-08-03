@@ -16,7 +16,7 @@ cask "meatshell" do
   desc "一个轻量级、低内存占用的 SSH / 终端客户端（A lightweight, low-memory SSH / terminal client）"
   homepage "https://github.com/jeff141/meatshell"
 
-  # depends_on macos: :catalina
+  depends_on macos: :catalina
 
   app "meatshell.app"
 

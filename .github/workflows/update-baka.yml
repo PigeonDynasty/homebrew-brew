@@ -3,7 +3,7 @@ name: Update baka cask
 on:
   workflow_dispatch:
   schedule:
-    - cron: "11 3 * * *"
+    - cron: "23 3 * * *" # 每天 UTC 03:23
 
 permissions:
   contents: write
@@ -17,19 +17,15 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Read current cask version
+      - name: Read current version
         id: current
         shell: bash
         run: |
           set -euo pipefail
-          current_version="$(ruby -e 'text=File.read("Casks/baka.rb"); puts text[/^\s*version\s+"([^"]+)"/, 1]')"
-          if [ -z "$current_version" ]; then
-            echo "Failed to read current version from Casks/baka.rb"
-            exit 1
-          fi
-          echo "version=$current_version" >> "$GITHUB_OUTPUT"
+          v="$(ruby -e 't=File.read("Casks/baka.rb"); puts t[/^\s*version\s+"([^"]+)"/, 1]')"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
 
-      - name: Get latest release tag
+      - name: Get latest release
         id: release
         shell: bash
         run: |
@@ -37,7 +33,7 @@ jobs:
           json="$(curl -fsSL https://api.github.com/repos/AniBakaBaka/AniBaka/releases/latest)"
           tag="$(echo "$json" | jq -r '.tag_name')"
           if [ -z "$tag" ] || [ "$tag" = "null" ]; then
-            echo "Failed to get latest release tag"
+            echo "Failed to get latest tag"
             exit 1
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
@@ -55,7 +51,7 @@ jobs:
             echo "update_needed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Download dmg and compute sha256
+      - name: Download assets and compute sha256
         if: steps.compare.outputs.update_needed == 'true'
         id: sha
         shell: bash
@@ -65,14 +61,22 @@ jobs:
           version="${{ steps.release.outputs.tag }}"
           version_major="${version%%+*}"
           build="${version#*+}"
-          asset_url="https://github.com/AniBakaBaka/AniBaka/releases/download/${version_major}/baka-${version_major}+${build}-macos.dmg"
+
+          arm_url="https://github.com/AniBakaBaka/AniBaka/releases/download/${version_major}/baka-${version}-macos-arm64.dmg"
+          x86_url="https://github.com/AniBakaBaka/AniBaka/releases/download/${version_major}/baka-${version}-macos-x86_64.dmg"
 
           tmpdir="$(mktemp -d)"
-          curl -fsSL -L "$asset_url" -o "$tmpdir/baka.dmg"
-          sha256="$(shasum -a 256 "$tmpdir/baka.dmg" | awk '{print $1}')"
+          curl -fsSL -L "$arm_url" -o "$tmpdir/baka-arm64.dmg"
+          curl -fsSL -L "$x86_url" -o "$tmpdir/baka-x86_64.dmg"
 
-          echo "asset_url=$asset_url" >> "$GITHUB_OUTPUT"
-          echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
+          arm_sha="$(shasum -a 256 "$tmpdir/baka-arm64.dmg" | awk '{print $1}')"
+          x86_sha="$(shasum -a 256 "$tmpdir/baka-x86_64.dmg" | awk '{print $1}')"
+
+          echo "version_major=$version_major" >> "$GITHUB_OUTPUT"
+          echo "arm_url=$arm_url" >> "$GITHUB_OUTPUT"
+          echo "x86_url=$x86_url" >> "$GITHUB_OUTPUT"
+          echo "arm_sha=$arm_sha" >> "$GITHUB_OUTPUT"
+          echo "x86_sha=$x86_sha" >> "$GITHUB_OUTPUT"
 
       - name: Update cask file
         if: steps.compare.outputs.update_needed == 'true'
@@ -81,7 +85,8 @@ jobs:
           set -euo pipefail
 
           version="${{ steps.release.outputs.tag }}"
-          sha256="${{ steps.sha.outputs.sha256 }}"
+          arm_sha="${{ steps.sha.outputs.arm_sha }}"
+          x86_sha="${{ steps.sha.outputs.x86_sha }}"
 
           python3 - <<'PY'
           from pathlib import Path
@@ -92,16 +97,19 @@ jobs:
           text = path.read_text()
 
           version = os.environ["VERSION"]
-          sha256 = os.environ["SHA256"]
+          arm_sha = os.environ["ARM_SHA"]
+          x86_sha = os.environ["X86_SHA"]
 
           text = re.sub(r'^\s*version\s+".*"$', f'  version "{version}"', text, flags=re.M)
-          text = re.sub(r'^\s*sha256\s+".*"$', f'  sha256 "{sha256}"', text, flags=re.M)
+          text = re.sub(r'^\s*sha256\s+".*PLACEHOLDER.*"$', f'    sha256 "{arm_sha}"', text, count=1, flags=re.M)
+          text = re.sub(r'^\s*sha256\s+".*PLACEHOLDER.*"$', f'    sha256 "{x86_sha}"', text, count=1, flags=re.M)
 
           path.write_text(text)
           PY
         env:
           VERSION: ${{ steps.release.outputs.tag }}
-          SHA256: ${{ steps.sha.outputs.sha256 }}
+          ARM_SHA: ${{ steps.sha.outputs.arm_sha }}
+          X86_SHA: ${{ steps.sha.outputs.x86_sha }}
 
       - name: Create pull request
         if: steps.compare.outputs.update_needed == 'true'
@@ -114,7 +122,9 @@ jobs:
             Automated update from upstream GitHub release.
 
             - Release: `${{ steps.release.outputs.tag }}`
-            - Asset: `${{ steps.sha.outputs.asset_url }}`
-            - SHA256: `${{ steps.sha.outputs.sha256 }}`
+            - ARM asset: `${{ steps.sha.outputs.arm_url }}`
+            - x86 asset: `${{ steps.sha.outputs.x86_url }}`
+            - ARM SHA256: `${{ steps.sha.outputs.arm_sha }}`
+            - x86 SHA256: `${{ steps.sha.outputs.x86_sha }}`
           labels: automated, automerge
           delete-branch: true
