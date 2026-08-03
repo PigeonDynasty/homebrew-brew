@@ -125,5 +125,5 @@ jobs:
             - x86 asset: `${{ steps.sha.outputs.x86_url }}`
             - ARM SHA256: `${{ steps.sha.outputs.arm_sha }}`
             - x86 SHA256: `${{ steps.sha.outputs.x86_sha }}`
-          labels: automated, automerge
+          labels: automated, automerge, homebrew, cask
           delete-branch: true

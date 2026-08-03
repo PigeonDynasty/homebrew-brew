@@ -129,5 +129,5 @@ jobs:
             - Release: `${{ steps.release.outputs.tag }}`
             - Asset: `${{ steps.sha.outputs.asset_url }}`
             - SHA256: `${{ steps.sha.outputs.sha256 }}`
-          labels: automated, homebrew, cask
+          labels: automated, automerge, homebrew, cask
           delete-branch: true
