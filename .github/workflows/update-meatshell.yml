@@ -63,11 +63,7 @@ jobs:
             echo "update_needed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Stop if up to date
-        if: steps.compare.outputs.update_needed == 'false'
-        run: echo "Cask is already up to date."
-
-      - name: Download release asset and calculate sha256
+      - name: Download release assets and calculate sha256
         if: steps.compare.outputs.update_needed == 'true'
         id: sha
         shell: bash
@@ -75,16 +71,21 @@ jobs:
           set -euo pipefail
 
           version="${{ steps.release.outputs.tag }}"
-          version="${version#v}"
-          asset_url="https://github.com/yituorou/meatshell/releases/download/v${version}/meatshell-v${version}-macos-aarch64.zip"
+
+          arm_url="https://github.com/yituorou/meatshell/releases/download/${version}/meatshell-${version}-macos-aarch64.zip"
+          x86_url="https://github.com/yituorou/meatshell/releases/download/${version}/meatshell-${version}-macos-x86_64.zip"
 
           tmpdir="$(mktemp -d)"
-          curl -fsSL -L "$asset_url" -o "$tmpdir/meatshell.zip"
+          curl -fsSL -L "$arm_url" -o "$tmpdir/meatshell-arm64.zip"
+          curl -fsSL -L "$x86_url" -o "$tmpdir/meatshell-x86_64.zip"
 
-          sha256="$(shasum -a 256 "$tmpdir/meatshell.zip" | awk '{print $1}')"
+          arm_sha="$(shasum -a 256 "$tmpdir/meatshell-arm64.zip" | awk '{print $1}')"
+          x86_sha="$(shasum -a 256 "$tmpdir/meatshell-x86_64.zip" | awk '{print $1}')"
 
-          echo "asset_url=$asset_url" >> "$GITHUB_OUTPUT"
-          echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
+          echo "arm_url=$arm_url" >> "$GITHUB_OUTPUT"
+          echo "x86_url=$x86_url" >> "$GITHUB_OUTPUT"
+          echo "arm_sha=$arm_sha" >> "$GITHUB_OUTPUT"
+          echo "x86_sha=$x86_sha" >> "$GITHUB_OUTPUT"
 
       - name: Update cask file
         if: steps.compare.outputs.update_needed == 'true'
@@ -93,8 +94,8 @@ jobs:
           set -euo pipefail
 
           version="${{ steps.release.outputs.tag }}"
-          version="${version#v}"
-          sha256="${{ steps.sha.outputs.sha256 }}"
+          arm_sha="${{ steps.sha.outputs.arm_sha }}"
+          x86_sha="${{ steps.sha.outputs.x86_sha }}"
 
           python3 - <<'PY'
           from pathlib import Path
@@ -105,29 +106,46 @@ jobs:
           text = path.read_text()
 
           version = os.environ["VERSION"]
-          sha256 = os.environ["SHA256"]
+          arm_sha = os.environ["ARM_SHA"]
+          x86_sha = os.environ["X86_SHA"]
 
           text = re.sub(r'^\s*version\s+".*"$', f'  version "{version}"', text, flags=re.M)
-          text = re.sub(r'^\s*sha256\s+".*"$', f'  sha256 "{sha256}"', text, flags=re.M)
+
+          text = re.sub(
+              r'(?ms)(on_arm do\s*\n\s*sha256\s+")([^"]+)(")',
+              lambda m: m.group(1) + arm_sha + m.group(3),
+              text,
+              count=1,
+          )
+
+          text = re.sub(
+              r'(?ms)(on_intel do\s*\n\s*sha256\s+")([^"]+)(")',
+              lambda m: m.group(1) + x86_sha + m.group(3),
+              text,
+              count=1,
+          )
 
           path.write_text(text)
           PY
         env:
           VERSION: ${{ steps.release.outputs.tag }}
-          SHA256: ${{ steps.sha.outputs.sha256 }}
+          ARM_SHA: ${{ steps.sha.outputs.arm_sha }}
+          X86_SHA: ${{ steps.sha.outputs.x86_sha }}
 
       - name: Create pull request
         if: steps.compare.outputs.update_needed == 'true'
         uses: peter-evans/create-pull-request@v7
         with:
           branch: chore/update-meatshell-cask
-          commit-message: "chore: update meatshell cask to ${{ steps.release.outputs.tag }}"
-          title: "Update meatshell cask to ${{ steps.release.outputs.tag }}"
+          commit-message: "chore: update meatshell to ${{ steps.release.outputs.tag }}"
+          title: "Update meatshell to ${{ steps.release.outputs.tag }}"
           body: |
             Automated update from upstream GitHub release.
 
             - Release: `${{ steps.release.outputs.tag }}`
-            - Asset: `${{ steps.sha.outputs.asset_url }}`
-            - SHA256: `${{ steps.sha.outputs.sha256 }}`
+            - ARM asset: `${{ steps.sha.outputs.arm_url }}`
+            - x86 asset: `${{ steps.sha.outputs.x86_url }}`
+            - ARM SHA256: `${{ steps.sha.outputs.arm_sha }}`
+            - x86 SHA256: `${{ steps.sha.outputs.x86_sha }}`
           labels: automated, automerge, homebrew, cask
           delete-branch: true
