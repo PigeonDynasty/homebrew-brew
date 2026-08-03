@@ -1,9 +1,9 @@
 cask "baka" do
-  version "5.0.0,0624"
+  version "5.0.0+0624"
   sha256 "1643a1dc8ca50d365c9ccb95561f8140a4a46a2bd6b700c95049431b9483f04f"
           
   on_macos do
-    version_major, build = version.split(",")
+    version_major, build = version.split("+")
     url "https://github.com/AniBakaBaka/AniBaka/releases/download/#{version_major}/baka-#{version_major}+#{build}-macos.dmg",verified: "https://github.com/AniBakaBaka/AniBaka"
   end
   
