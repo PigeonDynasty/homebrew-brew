@@ -1,6 +1,9 @@
 name: Auto merge PRs
 
 on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 3 * * *'
   pull_request_target:
     types: [opened, labeled, synchronize, reopened]
 
