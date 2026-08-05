@@ -1,5 +1,5 @@
 cask "baka" do
-  version "5.0.4+0727"
+  version "5.0.5+0803"
           
   on_arm do
     sha256 "95706c4b597278fd8c6e4676d1f04e656da6213ea63c47fc338a013899087a4d"
