@@ -1,6 +1,6 @@
 cask "mrrss" do
-  version "v1.3.27"
-  sha256 "b8011b5ddeedd1a3a4f57bec6ba3d724827822efe08815d4549399e2b8625b37"
+  version "v1.3.28"
+  sha256 "7f178a6d0cb2741a4bae85b058313ca4f4946c103c3c34625630f70f6f8e286a"
           
   on_macos do
     clean_version = version.sub(/^v/, "")
