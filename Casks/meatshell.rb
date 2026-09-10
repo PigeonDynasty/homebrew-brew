@@ -26,8 +26,8 @@ cask "meatshell" do
   app "meatshell.app"
 
   postflight_steps do
-    run "sudo",
-        args: ["xattr", "-r", "-d", "com.apple.quarantine",
+    run "xattr",
+        args: ["-r", "-d", "com.apple.quarantine",
                "/Applications/meatshell.app"]
   end
 

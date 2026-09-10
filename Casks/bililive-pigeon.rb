@@ -20,8 +20,8 @@ cask "bililive-pigeon" do
   app "Bililive Pigeon.app"
 
   postflight_steps do
-    run "sudo",
-        args: ["xattr", "-r", "-d", "com.apple.quarantine",
+    run "xattr",
+        args: ["-r", "-d", "com.apple.quarantine",
                "/Applications/Bililive Pigeon.app"]
   end
 
