@@ -1,13 +1,13 @@
 cask "baka" do
-  version "5.2.0+1001"
+  version "5.2.1+1007"
 
   on_arm do
-    sha256 "a6a5f429592d1ded3dff07578e2218329275f5ea4a79798e2e0ca47a1a8598ed"
+    sha256 "92205fc7e55d9066d637497fb99c8ad69bb135a43f90c568773b18757678d0d9"
 
     url "https://github.com/AniBakaBaka/AniBaka/releases/download/#{version}/baka-#{version}-macos-arm64.dmg"
   end
   on_intel do
-    sha256 "f9965a89bbae948d30e2dc1bd6b182738a5a6f39a1be5db44c6bfbe007cb01c1"
+    sha256 "59cd0e3127dd0076d3ac4cdd15afa125fe5f3ef5cff8b960c65630634475773f"
 
     url "https://github.com/AniBakaBaka/AniBaka/releases/download/#{version}/baka-#{version}-macos-x86_64.dmg"
   end
