@@ -1,8 +1,8 @@
 cask "mrrss" do
   on_system :catalina, :or_newer do
-  version "v1.3.38"
+  version "v1.3.39"
   end
-  sha256 "69e8c91c96dc7fc7407197dbc8e74c827f89e66a1aa24dc50c257da1632f93b5"
+  sha256 "4649941c92762ca494b3d32a1dde1eef5ac15351f8dfafb08dd6f62ade009d41"
 
   on_macos do
     clean_version = version.sub(/^v/, "")
