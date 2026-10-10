@@ -1,0 +1,156 @@
+name: Update rozi formula
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 3 * * *" # 每天 UTC 03:23
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-formula:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Read current formula version
+        id: current
+        shell: bash
+        run: |
+          set -euo pipefail
+          current_version="$(ruby -e 'text=File.read("Formula/rozi.rb"); puts text[/rozi-(\d+(?:\.\d+)+)-aarch64-apple-darwin\.tar\.gz/, 1]')"
+          if [ -z "$current_version" ]; then
+            echo "Failed to read current version from Formula/rozi.rb"
+            exit 1
+          fi
+          echo "version=$current_version" >> "$GITHUB_OUTPUT"
+
+      - name: Get latest GitHub release
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # `/releases/latest` skips pre-releases, so the rolling `nightly` tag is ignored.
+          json="$(curl -fsSL https://api.github.com/repos/tui-lipan/rozi/releases/latest)"
+          tag="$(echo "$json" | jq -r '.tag_name')"
+
+          if [ -z "$tag" ] || [ "$tag" = "null" ]; then
+            echo "Failed to get latest release tag"
+            exit 1
+          fi
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Compare versions
+        id: compare
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          current="${{ steps.current.outputs.version }}"
+          latest="${{ steps.release.outputs.tag }}"
+
+          current="${current#v}"
+          latest="${latest#v}"
+
+          if [ "$current" = "$latest" ]; then
+            echo "update_needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "update_needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download release assets and calculate sha256
+        if: steps.compare.outputs.update_needed == 'true'
+        id: sha
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          tag="${{ steps.release.outputs.tag }}"
+          version="${tag#v}"
+
+          arm_url="https://github.com/tui-lipan/rozi/releases/download/${tag}/rozi-${version}-aarch64-apple-darwin.tar.gz"
+          x86_url="https://github.com/tui-lipan/rozi/releases/download/${tag}/rozi-${version}-x86_64-apple-darwin.tar.gz"
+
+          tmpdir="$(mktemp -d)"
+          curl -fsSL -L "$arm_url" -o "$tmpdir/rozi-arm64.tar.gz"
+          curl -fsSL -L "$x86_url" -o "$tmpdir/rozi-x86_64.tar.gz"
+
+          arm_sha="$(shasum -a 256 "$tmpdir/rozi-arm64.tar.gz" | awk '{print $1}')"
+          x86_sha="$(shasum -a 256 "$tmpdir/rozi-x86_64.tar.gz" | awk '{print $1}')"
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "arm_url=$arm_url" >> "$GITHUB_OUTPUT"
+          echo "x86_url=$x86_url" >> "$GITHUB_OUTPUT"
+          echo "arm_sha=$arm_sha" >> "$GITHUB_OUTPUT"
+          echo "x86_sha=$x86_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Update formula file
+        if: steps.compare.outputs.update_needed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          import re
+
+          path = Path("Formula/rozi.rb")
+          text = path.read_text()
+
+          version = os.environ["VERSION"]
+          arm_sha = os.environ["ARM_SHA"]
+          x86_sha = os.environ["X86_SHA"]
+
+          # The version only lives inside the download URLs (Homebrew scans it from there).
+          text = re.sub(r"/download/v\d+(?:\.\d+)+/", f"/download/v{version}/", text)
+          text = re.sub(
+              r"rozi-\d+(?:\.\d+)+-(aarch64|x86_64)-apple-darwin",
+              rf"rozi-{version}-\1-apple-darwin",
+              text,
+          )
+
+          text = re.sub(
+              r'(?s)(on_arm do.*?sha256\s+")([0-9a-f]{64})(")',
+              lambda m: m.group(1) + arm_sha + m.group(3),
+              text,
+              count=1,
+          )
+
+          text = re.sub(
+              r'(?s)(on_intel do.*?sha256\s+")([0-9a-f]{64})(")',
+              lambda m: m.group(1) + x86_sha + m.group(3),
+              text,
+              count=1,
+          )
+
+          path.write_text(text)
+          PY
+        env:
+          VERSION: ${{ steps.sha.outputs.version }}
+          ARM_SHA: ${{ steps.sha.outputs.arm_sha }}
+          X86_SHA: ${{ steps.sha.outputs.x86_sha }}
+
+      - name: Create pull request
+        if: steps.compare.outputs.update_needed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: chore/update-rozi-formula
+          commit-message: "chore: update rozi to ${{ steps.release.outputs.tag }}"
+          title: "Update rozi to ${{ steps.release.outputs.tag }}"
+          body: |
+            Automated update from upstream GitHub release.
+
+            - Release: `${{ steps.release.outputs.tag }}`
+            - ARM asset: `${{ steps.sha.outputs.arm_url }}`
+            - x86 asset: `${{ steps.sha.outputs.x86_url }}`
+            - ARM SHA256: `${{ steps.sha.outputs.arm_sha }}`
+            - x86 SHA256: `${{ steps.sha.outputs.x86_sha }}`
+          labels: automated, automerge, homebrew, formula
+          delete-branch: true
