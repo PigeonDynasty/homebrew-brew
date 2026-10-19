@@ -1,10 +1,8 @@
 cask "mrrss" do
-  on_system :catalina, :or_newer do
-  version "v1.3.40"
-  end
-  sha256 "b7f5cdddf9bb5aa1c95c5ed86a602c3d08fba1d40e1e6d195bc60382e9270992"
-
   on_macos do
+    version "v1.3.40"
+    sha256 "b7f5cdddf9bb5aa1c95c5ed86a602c3d08fba1d40e1e6d195bc60382e9270992"
+
     clean_version = version.sub(/^v/, "")
     url "https://github.com/WCY-dt/MrRSS/releases/download/#{version}/MrRSS-#{clean_version}-darwin-universal.dmg"
   end
