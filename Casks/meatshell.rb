@@ -1,13 +1,13 @@
 cask "meatshell" do
-  version "v0.7.7"
+  version "v0.7.8"
 
   on_arm do
-    sha256 "8f0b17a9e061705494111daffa35feec146cc2828ee06891687d3ff752878e86"
+    sha256 "02bb5342fb7fd32afdac7f0b58e8f0113fb74a16003e28a17a7d2e5d499484b5"
 
     url "https://github.com/yituorou/meatshell/releases/download/#{version}/meatshell-#{version}-macos-aarch64.zip"
   end
   on_intel do
-    sha256 "0ace603131e124924954ea4ef1dc1ac84f65cf0e7725a47ed3e603b6623bb2cd"
+    sha256 "4eaf880844a21949d18b19ab0ef9aa2de4bad3b93ccb4d6f5c698c4be5959990"
 
     url "https://github.com/yituorou/meatshell/releases/download/#{version}/meatshell-#{version}-macos-x86_64.zip"
   end
