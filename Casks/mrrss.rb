@@ -1,7 +1,7 @@
 cask "mrrss" do
   on_macos do
-  version "v1.3.41"
-  sha256 "925d2f1293539af36ac086910dcc462e627cd5d02d5fb3f06f368c05ab7c0b68"
+  version "v1.3.42"
+  sha256 "aa5940fc80329e51c306e99e83b3446295810bcf4d72cfb43ecc44d789773ed7"
 
     clean_version = version.sub(/^v/, "")
     url "https://github.com/WCY-dt/MrRSS/releases/download/#{version}/MrRSS-#{clean_version}-darwin-universal.dmg"
