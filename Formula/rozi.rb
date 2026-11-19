@@ -12,12 +12,12 @@ class Rozi < Formula
 
   on_macos do
     on_arm do
-      url "https://github.com/tui-lipan/rozi/releases/download/v0.0.49/rozi-0.0.49-aarch64-apple-darwin.tar.gz"
-      sha256 "971a947c4cc39ae4aeaf569a13bf2b01e05c5163e950fe430358e1e743a92e35"
+      url "https://github.com/tui-lipan/rozi/releases/download/v0.1.1/rozi-0.1.1-aarch64-apple-darwin.tar.gz"
+      sha256 "18a9ae9cae221929179dceb2464b905ab51fce6d2effacf3e33d31ca6abe729a"
     end
     on_intel do
-      url "https://github.com/tui-lipan/rozi/releases/download/v0.0.49/rozi-0.0.49-x86_64-apple-darwin.tar.gz"
-      sha256 "1acc7efafbdc52a5620b7a8c3ced42d05a800be4fcc76e993f2a965d1c2b31bd"
+      url "https://github.com/tui-lipan/rozi/releases/download/v0.1.1/rozi-0.1.1-x86_64-apple-darwin.tar.gz"
+      sha256 "0017ac1e6ee04f6a351dd82451e143ecbf5cc9dced2c65afae8718af3e3be94d"
     end
   end
 
